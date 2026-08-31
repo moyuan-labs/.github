@@ -1,0 +1,76 @@
+name: Reusable Node CI
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version used by the repository
+        required: false
+        type: string
+        default: "24"
+      install-command:
+        description: Locked dependency installation command
+        required: false
+        type: string
+        default: npm ci
+      build-command:
+        description: Production build command; use an empty string to skip
+        required: false
+        type: string
+        default: npm run build
+      test-command:
+        description: Test command; use an empty string to skip
+        required: false
+        type: string
+        default: npm test
+      install-playwright:
+        description: Install Chromium before tests
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Node build and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Detect Node project
+        id: project
+        shell: bash
+        run: |
+          if [[ ! -f package.json ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No package.json yet; Node profile is installed but checks are not active."
+            exit 0
+          fi
+          if [[ ! -f package-lock.json ]]; then
+            echo "::error::package.json exists but package-lock.json is missing."
+            exit 1
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+      - name: Set up Node.js
+        if: steps.project.outputs.enabled == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+      - name: Install locked dependencies
+        if: steps.project.outputs.enabled == 'true'
+        run: ${{ inputs.install-command }}
+      - name: Build
+        if: steps.project.outputs.enabled == 'true' && inputs.build-command != ''
+        run: ${{ inputs.build-command }}
+      - name: Install Chromium
+        if: steps.project.outputs.enabled == 'true' && inputs.install-playwright
+        run: npx playwright install --with-deps chromium
+      - name: Test
+        if: steps.project.outputs.enabled == 'true' && inputs.test-command != ''
+        run: ${{ inputs.test-command }}

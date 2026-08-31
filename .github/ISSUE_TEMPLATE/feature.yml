@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a user or developer outcome before implementation
+title: "proposal: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: Who has the problem, in what situation, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe a verifiable result without prescribing unnecessary implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scope boundaries
+      description: What is explicitly in scope and out of scope?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting evidence
+      description: Add user feedback, examples, links, or state that evidence is not yet available.
+    validations:
+      required: true
