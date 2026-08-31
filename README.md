@@ -1,6 +1,6 @@
 # moyuan-labs GitHub standards
 
-This public repository provides organization-wide GitHub defaults and candidate reusable automation for `moyuan-labs`.
+This public repository provides organization-wide GitHub defaults and reusable automation for `moyuan-labs`. The Node workflow has completed a real cross-repository CommerceKernel run; Python and content workflows remain candidates pending real callers.
 
 ## What is inherited automatically
 

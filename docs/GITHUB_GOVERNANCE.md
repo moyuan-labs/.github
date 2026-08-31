@@ -26,9 +26,14 @@ Local branch cleanup remains an Agentic Git Delivery responsibility. Delete a lo
 - `workflow-templates/node-ci.yml` is an optional GitHub Actions UI template. It is not automatic provisioning.
 - `repository-profiles/*` contains the thin callers and matching Dependabot configuration injected by the repository creator.
 
-Callers currently reference `@main`. Treat the reusable workflows as reviewable organization infrastructure. Do not call them validated from another repository until a real caller Pull Request has completed successfully.
+Callers normally reference `@main`. Treat the reusable workflows as reviewable organization infrastructure and record real caller evidence before declaring each profile validated.
 
-In this bootstrap change, the creator has been syntax-checked and dry-run for all four profiles, and the workflow files have passed `actionlint`. No disposable remote repository was created for an end-to-end provisioner test. The provisioner and workflows remain candidates until their respective real GitHub Pull Requests complete successfully.
+Validation status:
+
+- Node: real cross-repository validation passed in `moyuan-labs/commerce-kernel` PR #3, Actions run `33413275313`. The locked install, production build, Chromium installation, and all 17 Playwright tests passed.
+- Python: YAML and `actionlint` passed; no real caller yet.
+- Docs/assets: YAML and `actionlint` passed; no real caller yet.
+- Repository creator: shell syntax, invalid-input rejection, and all four profile dry-runs passed. No disposable remote repository was created for a full end-to-end provisioner test.
 
 ## Current plan limitation
 
