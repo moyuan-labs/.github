@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: $0 <repository-name> <node|python|docs|assets> [private|public]" >&2
+}
+
+repository_name="${1:-}"
+profile="${2:-}"
+visibility="${3:-private}"
+organization="${MOYUAN_GITHUB_ORG:-moyuan-labs}"
+dry_run="${DRY_RUN:-0}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repository_root="$(cd "$script_dir/.." && pwd)"
+profile_root="$repository_root/repository-profiles/$profile"
+defaults_file="$repository_root/settings/repository-defaults.json"
+
+if [[ -z "$repository_name" || -z "$profile" ]]; then
+  usage
+  exit 2
+fi
+
+if [[ ! "$repository_name" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "Repository name contains unsupported characters: $repository_name" >&2
+  exit 2
+fi
+
+if [[ ! -d "$profile_root" ]]; then
+  echo "Unknown repository profile: $profile" >&2
+  usage
+  exit 2
+fi
+
+case "$visibility" in
+  private | public) ;;
+  *)
+    echo "Visibility must be private or public: $visibility" >&2
+    exit 2
+    ;;
+esac
+
+full_name="$organization/$repository_name"
+
+if [[ "$dry_run" == "1" ]]; then
+  printf 'DRY RUN: create %s as %s with profile %s\n' "$full_name" "$visibility" "$profile"
+  printf 'DRY RUN: inject %s on branch chore/bootstrap-governance\n' "$profile_root"
+  printf 'DRY RUN: apply %s and open a Pull Request without merging\n' "$defaults_file"
+  exit 0
+fi
+
+for command_name in gh git mktemp; do
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Required command is unavailable: $command_name" >&2
+    exit 1
+  fi
+done
+
+gh auth status >/dev/null
+
+if gh repo view "$full_name" >/dev/null 2>&1; then
+  echo "Repository already exists: $full_name" >&2
+  exit 1
+fi
+
+gh repo create "$full_name" "--$visibility" --add-readme --description "$repository_name ($profile profile)"
+
+bootstrap_tmp="$(mktemp -d "${TMPDIR:-/tmp}/moyuan-bootstrap.XXXXXX")"
+trap 'rm -rf -- "$bootstrap_tmp"' EXIT
+clone_dir="$bootstrap_tmp/repository"
+
+gh repo clone "$full_name" "$clone_dir"
+git -C "$clone_dir" switch -c chore/bootstrap-governance
+cp -R "$profile_root/." "$clone_dir/"
+
+git -C "$clone_dir" add .github
+git -C "$clone_dir" diff --cached --check
+git -C "$clone_dir" commit -m "chore: bootstrap $profile repository governance"
+git -C "$clone_dir" push -u origin chore/bootstrap-governance
+
+gh api --method PATCH "repos/$full_name" --input "$defaults_file" >/dev/null
+
+gh pr create \
+  --repo "$full_name" \
+  --base main \
+  --head chore/bootstrap-governance \
+  --title "chore: bootstrap $profile repository governance" \
+  --body "This Pull Request was created automatically by the audited moyuan-labs repository creator and injects the \`$profile\` repository profile.\n\nIt adds a thin CI caller and matching Dependabot configuration. Automatic deletion of merged remote head branches is enabled for the repository. Auto-merge is not enabled, and this Pull Request has not been merged.\n\nThe user only needs to review the profile commands and explicitly approve or reject the merge."

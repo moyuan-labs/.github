@@ -1,0 +1,7 @@
+{
+  "name": "moyuan-labs Node CI",
+  "description": "Build and test a lockfile-based Node.js project with the shared organization workflow.",
+  "iconName": "octicon workflow",
+  "categories": ["continuous-integration", "JavaScript"],
+  "filePatterns": ["package.json$"]
+}
